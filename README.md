@@ -123,8 +123,9 @@ message carries `[skip ci]` so it does not retrigger the workflow.
 ### Required repository setup
 
 - Secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` for the registry push.
-- The `publish` job requests `contents: write`; the repository's Actions setting must allow workflows to write
-  (Settings → Actions → General → Workflow permissions), otherwise the tag-bump commit is rejected.
+- The repository default workflow permission is read-only, so both jobs declare `permissions: contents: write`
+  explicitly — `build` needs it to submit the dependency graph, `publish` to push the tag-bump commit. An explicit
+  `permissions` block overrides the read-only default, so no repository setting change is needed.
 
 Dependabot is configured in `.github/dependabot.yml`.
 
