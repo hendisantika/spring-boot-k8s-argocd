@@ -1,3 +1,6 @@
-docker build -t hendisantika/spring-boot-argocd-app:v2 .
+#!/usr/bin/env bash
+# Kept for backwards compatibility — tags are now workflow run numbers, not v1/v2.
+# Prefer ./build.sh <tag>.
+set -euo pipefail
 
-docker push hendisantika/spring-boot-argocd-app:v2
+exec "$(dirname "$0")/build.sh" "$@"

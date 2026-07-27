@@ -14,6 +14,9 @@ on:
   pull_request:
     branches: [ "main" ]
 
+env:
+  IMAGE_NAME: hendisantika/spring-boot-k8s-argocd
+
 jobs:
   build:
 
@@ -33,3 +36,38 @@ jobs:
     # Optional: Uploads the full dependency graph to GitHub to improve the quality of Dependabot alerts this repository can receive
     - name: Update dependency graph
       uses: advanced-security/maven-dependency-submission-action@b275d12641ac2d2108b2cbb7598b154ad2f2cee8
+
+  # Builds and pushes the image tagged with the workflow run number, then writes that
+  # same tag back into k8s/spring-app-deployment.yaml so Argo CD picks up the new revision.
+  publish:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and push image
+      run: |
+        docker build -t "$IMAGE_NAME:${{ github.run_number }}" .
+        docker push "$IMAGE_NAME:${{ github.run_number }}"
+
+    - name: Bump image tag in the Argo CD manifest
+      run: |
+        sed -i -E "s|(image: ${IMAGE_NAME}):.*|\1:${{ github.run_number }}|" k8s/spring-app-deployment.yaml
+        git config user.name  "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add k8s/spring-app-deployment.yaml
+        git diff --cached --quiet && echo "No manifest change" && exit 0
+        git commit -m "ci: bump image to ${IMAGE_NAME}:${{ github.run_number }} [skip ci]"
+        git push
