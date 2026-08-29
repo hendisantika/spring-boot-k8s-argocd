@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
         - name: spring-argocd-app
-          image: hendisantika/spring-boot-k8s-argocd:63
+          image: hendisantika/spring-boot-k8s-argocd:66
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
