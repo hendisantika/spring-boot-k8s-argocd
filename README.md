@@ -9,7 +9,7 @@ sync with whatever is committed there.
 | Component     | Version                  |
 |---------------|--------------------------|
 | Java          | 25                       |
-| Spring Boot   | 4.1.0                    |
+| Spring Boot   | 4.1.1                    |
 | Build tool    | Maven (wrapper included) |
 | Container     | Docker (multi-stage)     |
 | Orchestration | Kubernetes               |
@@ -21,10 +21,14 @@ Dependencies: `spring-boot-starter-web`, `spring-boot-devtools`, `spring-boot-co
 ## Project layout
 
 ```
+├── .sdkmanrc                      # Pins JDK 25 for SDKMAN! (`sdk env`)
 ├── Dockerfile                     # Multi-stage build (Maven → Amazon Corretto 25 Alpine)
 ├── application.yaml               # Argo CD Application manifest (apply into the argocd namespace)
 ├── install.yaml                   # Vendored Argo CD install manifest
 ├── build.sh                       # Local docker build + push (build-v2.sh is a legacy shim)
+├── .github/
+│   ├── dependabot.yml             # Maven, GitHub Actions and Docker update rules
+│   └── workflows/maven.yml        # Build, publish image, bump manifest
 ├── k8s/
 │   └── spring-app-deployment.yaml # Deployment + NodePort Service watched by Argo CD
 └── src/main/java/id/my/hendisantika/k8sargocd/
@@ -40,12 +44,18 @@ Dependencies: `spring-boot-starter-web`, `spring-boot-devtools`, `spring-boot-co
 
 ## Running locally
 
-Requires JDK 25 on the `PATH` (or `JAVA_HOME`):
+Requires **JDK 25** on the `PATH` (or `JAVA_HOME`). With [SDKMAN!](https://sdkman.io), `sdk env install` in the
+project root picks up the version pinned in `.sdkmanrc`:
 
 ```bash
+sdk env install        # optional: installs/selects Java 25 from .sdkmanrc
 ./mvnw spring-boot:run
 curl http://localhost:8080/api/v1/hello
 ```
+
+The build enforces the JDK: `maven-enforcer-plugin` checks `requireJavaVersion [${java.version},)`, so running Maven on
+an older JDK stops immediately with `JDK 25 or newer is required to build this project.` instead of a confusing
+compiler error. The required version comes from the single `java.version` property in `pom.xml`.
 
 Run the tests:
 
@@ -227,7 +237,32 @@ message carries `[skip ci]` so it does not retrigger the workflow.
   explicitly — `build` needs it to submit the dependency graph, `publish` to push the tag-bump commit. An explicit
   `permissions` block overrides the read-only default, so no repository setting change is needed.
 
-Dependabot is configured in `.github/dependabot.yml`.
+### Troubleshooting `publish`
+
+If `Log in to Docker Hub` fails with `unauthorized: personal access token is expired`, create a new access token at
+<https://app.docker.com/settings/personal-access-tokens> (Read & Write scope) and replace the secret:
+
+```bash
+gh secret set DOCKERHUB_TOKEN     # paste the token at the prompt
+gh run rerun --failed <run-id>    # or push again
+```
+
+## Dependency updates (Dependabot)
+
+`.github/dependabot.yml` keeps three ecosystems current. All PRs are labelled `dependencies` and assigned to the
+maintainer, and their titles follow Conventional Commits.
+
+| Ecosystem        | Covers                                             | Schedule (Asia/Jakarta) | Commit prefix   | Grouping                                                  |
+|------------------|----------------------------------------------------|-------------------------|-----------------|-----------------------------------------------------------|
+| `maven`          | `pom.xml` dependencies, Spring Boot parent, Maven wrapper | daily 05:00     | `build(deps)`   | `spring-boot` (all `org.springframework.boot*`), `maven-minor-patch` |
+| `github-actions` | actions used in `.github/workflows`                | daily 05:00             | `ci(deps)`      | `actions-minor-patch`                                     |
+| `docker`         | `Dockerfile` base images (`maven`, `amazoncorretto`) | weekly, Monday 05:00  | `build(docker)` | —                                                         |
+
+Major updates are still raised as individual PRs so they get reviewed on their own. The exception is the Docker base
+images: major bumps of `amazoncorretto` and `maven` are ignored so the project stays on the JDK 25 LTS line — moving to
+a new Java major is a deliberate change to `java.version`, the `Dockerfile` and the workflow together.
+
+Every Dependabot PR runs the `build` job, so a bump only merges once it compiles and the tests pass on JDK 25.
 
 ## GitOps workflow
 
