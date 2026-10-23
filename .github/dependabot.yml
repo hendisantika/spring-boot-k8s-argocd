@@ -1,5 +1,6 @@
 version: 2
 updates:
+  # Maven dependencies, the Spring Boot parent, and the Maven wrapper distribution.
   - package-ecosystem: maven
     directory: "/"
     schedule:
@@ -7,10 +8,64 @@ updates:
       time: '05:00'
       timezone: Asia/Jakarta
     open-pull-requests-limit: 10
-  - package-ecosystem: "github-actions"
+    assignees:
+      - hendisantika
+    labels:
+      - dependencies
+      - java
+    commit-message:
+      prefix: "build(deps)"
+      prefix-development: "build(deps-dev)"
+    groups:
+      # Spring Boot releases move the parent and the managed starters together.
+      spring-boot:
+        patterns:
+          - "org.springframework.boot*"
+      maven-minor-patch:
+        update-types:
+          - minor
+          - patch
+
+  # Workflow actions in .github/workflows.
+  - package-ecosystem: github-actions
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: daily
       time: '05:00'
       timezone: Asia/Jakarta
     open-pull-requests-limit: 10
+    assignees:
+      - hendisantika
+    labels:
+      - dependencies
+      - github_actions
+    commit-message:
+      prefix: "ci(deps)"
+    groups:
+      actions-minor-patch:
+        update-types:
+          - minor
+          - patch
+
+  # Base images in the Dockerfile (Maven builder + Corretto runtime).
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: '05:00'
+      timezone: Asia/Jakarta
+    open-pull-requests-limit: 5
+    assignees:
+      - hendisantika
+    labels:
+      - dependencies
+      - docker
+    commit-message:
+      prefix: "build(docker)"
+    ignore:
+      # Stay on the JDK 25 LTS line; a new Java major is a deliberate upgrade, not a bot PR.
+      - dependency-name: "amazoncorretto"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "maven"
+        update-types: ["version-update:semver-major"]
