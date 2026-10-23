@@ -75,4 +75,7 @@ jobs:
         git add k8s/spring-app-deployment.yaml
         git diff --cached --quiet && echo "No manifest change" && exit 0
         git commit -m "ci: bump image to ${IMAGE_NAME}:${{ github.run_number }} [skip ci]"
-        git push
+        # main may have moved since this run's commit (a re-run, or a merge landing
+        # mid-build), so replay the bump on top of it before pushing.
+        git pull --rebase origin main
+        git push origin HEAD:main

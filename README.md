@@ -228,7 +228,8 @@ Inside the `spring-argocd-app` namespace the short name `http://spring-argocd-ap
 | `publish` | pushes to `main`    | Builds and pushes `hendisantika/spring-boot-k8s-argocd:${{ github.run_number }}`, then rewrites the `image:` line in `k8s/spring-app-deployment.yaml` and commits it back |
 
 That commit is what closes the GitOps loop: Argo CD sees the new tag in `k8s/` and rolls out the revision. The commit
-message carries `[skip ci]` so it does not retrigger the workflow.
+message carries `[skip ci]` so it does not retrigger the workflow. Before pushing, the job rebases the bump onto the latest
+`main`, so a re-run or a merge that lands mid-build does not get the push rejected.
 
 ### Required repository setup
 
