@@ -262,6 +262,10 @@ Major updates are still raised as individual PRs so they get reviewed on their o
 images: major bumps of `amazoncorretto` and `maven` are ignored so the project stays on the JDK 25 LTS line — moving to
 a new Java major is a deliberate change to `java.version`, the `Dockerfile` and the workflow together.
 
+The `docker` entry uses `exclude-paths` to skip `install.yaml`, `application.yaml` and `k8s/`. `install.yaml` is the
+vendored Argo CD release, whose images must move together with its CRDs and RBAC — upgrade it by replacing the whole
+file from a new Argo CD release. The image tag in `k8s/` is owned by CI.
+
 Every Dependabot PR runs the `build` job, so a bump only merges once it compiles and the tests pass on JDK 25.
 
 ## GitOps workflow

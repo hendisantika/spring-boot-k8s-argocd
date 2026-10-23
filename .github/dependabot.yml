@@ -63,6 +63,12 @@ updates:
       - docker
     commit-message:
       prefix: "build(docker)"
+    # Only the Dockerfile. install.yaml is the vendored Argo CD release and must be
+    # upgraded as a whole; the k8s/ image tag is written by CI on every push.
+    exclude-paths:
+      - "install.yaml"
+      - "application.yaml"
+      - "k8s/**"
     ignore:
       # Stay on the JDK 25 LTS line; a new Java major is a deliberate upgrade, not a bot PR.
       - dependency-name: "amazoncorretto"
